@@ -6,6 +6,8 @@ provider:
   runtime: nodejs12.x
   lambdaHashingVersion: 20201221
 
+  memorySize: 128
+  timeout: 3
   stage: dev
   region: us-east-1
 
@@ -49,6 +51,10 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:service}-${self:provider.stage}-pastebucket
+        LifecycleConfiguration:
+          Rules:
+            - Status: Enabled
+              ExpirationInDays: 1
 
     PasteTable:
       Type: AWS::DynamoDB::Table
