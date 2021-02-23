@@ -1,0 +1,66 @@
+service: paste
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  lambdaHashingVersion: 20201221
+
+  stage: dev
+  region: us-east-1
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource:
+        - !GetAtt PasteTable.Arn
+    - Effect: "Allow"
+      Action:
+        - s3:PutObject
+        - s3:GetObject
+      Resource:
+        - !GetAtt PasteBucket.Arn
+        - !Join ["/", [ !GetAtt PasteBucket.Arn, "*" ] ]
+
+  environment:
+    BUCKET: !Ref PasteBucket
+    TABLE: !Ref PasteTable
+
+functions:
+  GetPaste:
+    handler: src/lambdas/GetPaste.handler
+    events:
+      - httpApi:
+          path: /paste/{id}
+          method: get
+
+  UploadPaste:
+    handler: src/lambdas/UploadPaste.handler
+    events:
+      - httpApi:
+          path: /paste
+          method: post
+
+resources:
+  Resources:
+    PasteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-${self:provider.stage}-pastebucket
+
+    PasteTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-pastetable
+        BillingMode: PAY_PER_REQUEST
+        TimeToLiveSpecification:
+          AttributeName: TTL
+          Enabled: true
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH 
